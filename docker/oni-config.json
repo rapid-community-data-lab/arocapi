@@ -27,7 +27,7 @@
     "navHeight": "80px",
     "showEllipsis": true,
     "help": {
-      "aboutText": "This is an Oni Data Portal publication. This portal provides access to a repository of language data, it is provided by the Language Data Commons of Australia [LDaCA](<a href='https://ldaca.edu.au'>https://ldaca.edu.au</a>).",
+      "aboutText": "This is an Oni Data Portal publication. This portal provides access to a repository of language data, it is provided by the Reusable and Accessible Public Interest Documents for the Community Data Lab [RAPID - CDL](<a href='https://rapid-community-data-lab.edu.au'>https://rapid-community-data-lab.edu.au</a>).",
       "citationText": "CITE AS: Oni Platform. A project with co-investment from Australian Research Data Commons, The University of Queensland, The University of Melbourne, The University of Sydney, Monash University, First Languages Australia and AARNet."
     },
     "subHelpLinks": [
