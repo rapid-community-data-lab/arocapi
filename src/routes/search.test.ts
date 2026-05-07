@@ -444,7 +444,7 @@ describe('Search Route', () => {
       expect(response.statusCode).toBe(400);
     });
 
-    it('should skip entities not found in database and log warning', async () => {
+    it('should fall back to OpenSearch _source when entity not in database (Map View tooltip support)', async () => {
       const mockEntities = [
         {
           id: 'http://example.com/entity/1',
@@ -458,7 +458,7 @@ describe('Search Route', () => {
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
         },
-        // Entity 2 is missing from database
+        // Entity 2 is missing from database — must still appear in response via _source fallback
       ];
 
       const mockSearchResponse = {
@@ -478,6 +478,9 @@ describe('Search Route', () => {
                 _score: 1.2,
                 _source: {
                   id: 'http://example.com/entity/2',
+                  name: ['Interview with Patricia Parker'],
+                  description: ['oral history interview'],
+                  entityType: ['RepositoryObject'],
                 },
                 highlight: {},
               },
@@ -502,8 +505,55 @@ describe('Search Route', () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-
+      // Both entities returned; OS-only one carries name/type from _source
+      expect(body.entities).toHaveLength(2);
+      expect(body.entities[0].id).toBe('http://example.com/entity/1');
+      expect(body.entities[1]).toMatchObject({
+        id: 'http://example.com/entity/2',
+        name: 'Interview with Patricia Parker',
+        entityType: 'RepositoryObject',
+        memberOf: null,
+        rootCollection: null,
+        access: { metadata: true, content: false },
+        counts: { collections: 0, objects: 0, files: 0 },
+        searchExtra: { score: 1.2 },
+      });
       expect(body).toMatchSnapshot();
+    });
+
+    it('OS-only fallback handles missing/scalar/empty fields gracefully', async () => {
+      // Covers pickStr branches: undefined, scalar string, and empty-array name
+      const mockSearchResponse = {
+        body: {
+          took: 1,
+          hits: {
+            total: { value: 3 },
+            hits: [
+              { _score: 1, _source: { id: 'os-only-1' /* no name/desc/type at all */ }, highlight: {} },
+              { _score: 1, _source: { id: 'os-only-2', name: 'scalar-name', entityType: 'Dataset' }, highlight: {} },
+              { _score: 1, _source: { id: 'os-only-3', name: [] }, highlight: {} },
+            ],
+          },
+          aggregations: {},
+        },
+      };
+      // @ts-expect-error TS is looking at the wrong function signature
+      opensearch.search.mockResolvedValue(mockSearchResponse);
+      // @ts-expect-error TS is looking at the wrong function signature
+      prisma.entity.findMany.mockResolvedValue([]);
+
+      const response = await fastify.inject({ method: 'POST', url: '/search', payload: { query: 't' } });
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.entities).toHaveLength(3);
+      // Falls back to id when name absent or empty array
+      expect(body.entities[0].name).toBe('os-only-1');
+      expect(body.entities[0].entityType).toBe('');
+      // Scalar string is preserved
+      expect(body.entities[1].name).toBe('scalar-name');
+      expect(body.entities[1].entityType).toBe('Dataset');
+      // Empty array falls back to id
+      expect(body.entities[2].name).toBe('os-only-3');
     });
 
     it('should handle missing id in search hit', async () => {

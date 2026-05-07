@@ -110,9 +110,22 @@ const search: FastifyPluginAsync<SearchRouteOptions> = async (fastify, opts) => 
 
             const dbEntity = entityMap.get(hit._source.id);
             if (!dbEntity) {
-              fastify.log.warn(`Entity ${hit._source.id} found in OpenSearch but not in database`);
-
-              return null;
+              const src = hit._source as Record<string, unknown>;
+              const pickStr = (v: unknown): string =>
+                Array.isArray(v) ? String(v[0] ?? '') : v == null ? '' : String(v);
+              return {
+                id: hit._source.id,
+                name: pickStr(src.name) || hit._source.id,
+                description: pickStr(src.description),
+                entityType: pickStr(src.entityType),
+                memberOf: null,
+                rootCollection: null,
+                metadataLicenseId: pickStr(src.metadataLicenseId),
+                contentLicenseId: pickStr(src.contentLicenseId),
+                access: { metadata: true, content: false },
+                counts: { collections: 0, objects: 0, files: 0 },
+                searchExtra: { score: hit._score, highlight: hit.highlight },
+              };
             }
 
             const base = baseEntityTransformer(dbEntity);

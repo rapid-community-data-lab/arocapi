@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { fastify, fastifyAfter, fastifyBefore, prisma } from '../test/helpers/fastify.js';
+import { fastify, fastifyAfter, fastifyBefore, opensearch, prisma } from '../test/helpers/fastify.js';
 import { AllPublicAccessTransformer } from '../transformers/default.js';
 import type { StandardErrorResponse } from '../utils/errors.js';
 import entityRoute from './entity.js';
@@ -50,8 +50,9 @@ describe('Entity Route', () => {
       });
     });
 
-    it('should return 404 when entity not found', async () => {
+    it('should return 404 when entity not found in Postgres or OpenSearch', async () => {
       prisma.entity.findUnique.mockResolvedValue(null);
+      opensearch.get.mockRejectedValue(Object.assign(new Error('Not Found'), { statusCode: 404 }));
 
       const response = await fastify.inject({
         method: 'GET',
@@ -61,6 +62,38 @@ describe('Entity Route', () => {
 
       expect(response.statusCode).toBe(404);
       expect(body).toMatchSnapshot();
+    });
+
+    it('should fall back to OpenSearch when entity not in Postgres (Map View detail link)', async () => {
+      prisma.entity.findUnique.mockResolvedValue(null);
+      opensearch.get.mockResolvedValue({
+        body: {
+          found: true,
+          _source: {
+            id: 'arcp://name,doi/interview/x',
+            name: ['Interview with X'],
+            entityType: ['RepositoryObject'],
+            description: ['oral history'],
+          },
+        },
+      });
+
+      const response = await fastify.inject({
+        method: 'GET',
+        url: `/entity/${encodeURIComponent('arcp://name,doi/interview/x')}`,
+      });
+      const body = JSON.parse(response.body);
+
+      expect(response.statusCode).toBe(200);
+      expect(body).toMatchObject({
+        id: 'arcp://name,doi/interview/x',
+        name: 'Interview with X',
+        entityType: 'RepositoryObject',
+        memberOf: null,
+        rootCollection: null,
+        access: { metadata: true, content: false },
+        counts: { collections: 0, objects: 0, files: 0 },
+      });
     });
 
     it('should return 500 when database error occurs', async () => {

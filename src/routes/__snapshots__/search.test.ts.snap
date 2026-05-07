@@ -28,6 +28,56 @@ exports[`Search Route > POST /search > should apply custom entity transformers 1
 }
 `;
 
+exports[`Search Route > POST /search > should fall back to OpenSearch _source when entity not in database (Map View tooltip support) 1`] = `
+{
+  "entities": [
+    {
+      "access": {
+        "content": true,
+        "metadata": true,
+      },
+      "contentLicenseId": null,
+      "description": "A test entity",
+      "entityType": "http://pcdm.org/models#Collection",
+      "id": "http://example.com/entity/1",
+      "memberOf": null,
+      "metadataLicenseId": null,
+      "name": "Test Entity 1",
+      "rootCollection": null,
+      "searchExtra": {
+        "highlight": {},
+        "score": 1.5,
+      },
+    },
+    {
+      "access": {
+        "content": false,
+        "metadata": true,
+      },
+      "contentLicenseId": "",
+      "counts": {
+        "collections": 0,
+        "files": 0,
+        "objects": 0,
+      },
+      "description": "oral history interview",
+      "entityType": "RepositoryObject",
+      "id": "http://example.com/entity/2",
+      "memberOf": null,
+      "metadataLicenseId": "",
+      "name": "Interview with Patricia Parker",
+      "rootCollection": null,
+      "searchExtra": {
+        "highlight": {},
+        "score": 1.2,
+      },
+    },
+  ],
+  "searchTime": 10,
+  "total": 2,
+}
+`;
+
 exports[`Search Route > POST /search > should handle id explicitly set to undefined 1`] = `
 {
   "error": {
@@ -134,32 +184,5 @@ exports[`Search Route > POST /search > should return null for memberOf/rootColle
   ],
   "searchTime": 10,
   "total": 1,
-}
-`;
-
-exports[`Search Route > POST /search > should skip entities not found in database and log warning 1`] = `
-{
-  "entities": [
-    {
-      "access": {
-        "content": true,
-        "metadata": true,
-      },
-      "contentLicenseId": null,
-      "description": "A test entity",
-      "entityType": "http://pcdm.org/models#Collection",
-      "id": "http://example.com/entity/1",
-      "memberOf": null,
-      "metadataLicenseId": null,
-      "name": "Test Entity 1",
-      "rootCollection": null,
-      "searchExtra": {
-        "highlight": {},
-        "score": 1.5,
-      },
-    },
-  ],
-  "searchTime": 10,
-  "total": 2,
 }
 `;

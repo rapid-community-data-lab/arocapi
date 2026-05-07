@@ -35,6 +35,30 @@ const entity: FastifyPluginAsync<EntityRouteOptions> = async (fastify, opts) => 
         });
 
         if (!entity) {
+          try {
+            const osRes = (await fastify.opensearch.get({ index: 'entities', id })) as {
+              body?: { found?: boolean; _source?: Record<string, unknown> };
+            };
+            if (osRes.body?.found && osRes.body._source) {
+              const src = osRes.body._source;
+              const pickStr = (v: unknown): string =>
+                Array.isArray(v) ? String(v[0] ?? '') : v == null ? '' : String(v);
+              return {
+                id,
+                name: pickStr(src.name) || id,
+                description: pickStr(src.description),
+                entityType: pickStr(src.entityType),
+                memberOf: null,
+                rootCollection: null,
+                metadataLicenseId: pickStr(src.metadataLicenseId),
+                contentLicenseId: pickStr(src.contentLicenseId),
+                access: { metadata: true, content: false },
+                counts: { collections: 0, objects: 0, files: 0 },
+              };
+            }
+          } catch {
+            // fall through to 404
+          }
           return reply.code(404).send(createNotFoundError('The requested entity was not found', id));
         }
 
